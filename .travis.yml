@@ -1,0 +1,30 @@
+language: julia
+os:
+  - linux
+julia:
+  - 1.0
+
+# Keep the following only for the labN-dev version of the repository
+#branches:
+#  only:
+#    - solution
+
+# Replace with the following once make labN-start version of the respository
+branches:
+  except:
+  - original
+
+
+script:
+#  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+#  - julia -e 'Pkg.clone(pwd())'
+#  - julia -e 'Pkg.test("PkgName",coverage=true)'
+#  - julia test/install_required_pacakges.jl
+#  - julia -e 'using Pkg; ENV["PYTHON"]=""; Pkg.build("PyCall")'
+#  - julia -e 'using PyCall; pyimport_conda("astropy.io.ascii","astropy")'
+  - cp Project.toml test/
+  - julia -e 'using Pkg; Pkg.activate("."); Pkg.instantiate();'
+  - julia -e 'include("src/ModelSpectrum.jl")
+  - julia -e 'cd("test"); using Pkg; Pkg.activate("."); Pkg.instantiate();'
+  - julia test/runtests.jl
+
