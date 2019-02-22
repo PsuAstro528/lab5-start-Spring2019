@@ -69,18 +69,15 @@ Note that the number of workers is equal to the number you added, rather than be
 
 ### Loading Packages and modules
 
-Now, we can start loading other packages that we'll be using.  For the first package, the code will be loaded on each processor, but it will only be brought into scope for the master process.
-    If we wanted the package to be in scope on each worker, then we can add the @everywhere macro in front of the using statement.
+Now, we can start loading other packages that we'll be using.  Since we want the packages to be in scope on each worker, then we need to add the @everywhere macro in front of the using statement.  Before we can do that we need to activate the project on each of the workers, so they know that they can use the packages in Project.toml.  We don't need to install or instantiate on each worker, since those write files to disk and all the workers have access to the same filesystem. 
 
 ```julia
-using Distributions
+@everywhere using Pkg
+@everywhere Pkg.activate(".")
 ```
 
 ```julia
-@everywhere using Pkg; Pkg.activate(".")    # Make sure each workers knows what packages the project depends on
-```
-
-```julia
+@everywhere using Distributions
 @everywhere using SharedArrays 
 @everywhere using DistributedArrays
 ```
