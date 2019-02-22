@@ -36,7 +36,7 @@ using Plots
 #pyplot()                # To switch to matplotlib backend, if you have issues with gr() backend
 ```
 
-Now, let us load Julia's `Distributed` module that provides much of the needed functionality.  
+Now, let us load Julia's `Distributed` module that provides much of the needed functionality.
 
 ```julia
 using Distributed
@@ -45,7 +45,7 @@ nworkers()
 
 Note that even if you have a Jupyter notebook server (or remote desktop or PBS job) that has been allocated multiple cores, that doesn't mean that you'll use them.  By default, Julia starts running on a single core which is included in the pool of worker processes.  
 We need to tell Julia how many processor cores to use.  By default, we're just using one.  How many should we add?  
-Let's get some information about the processor that we're running on.    
+Let's get some information about the processor that we're running on.
 
 ```julia
 Sys.cpu_summary()
@@ -53,8 +53,7 @@ Sys.cpu_summary()
 
 Next, we'll tell Julia to add several worker processes.  If you're running on ACI, then go ahead and add as many processors as you've been allocated.
 If you're running on your own system, then request no more processors than listed above.  It's likely that you might be better off requesting only half the number of processors as listed above.
-(Many processors present themselves as having more cores than they actually do.  For some applications, this can be useful. For many scientific applications it's better to only use as many worker threads as physical cores that are avaliable.)    
-    
+(Many processors present themselves as having more cores than they actually do.  For some applications, this can be useful. For many scientific applications it's better to only use as many worker threads as physical cores that are avaliable.)
 
 ```julia
 addprocs(4)
@@ -70,15 +69,15 @@ Note that the number of workers is equal to the number you added, rather than be
 
 ### Loading Packages and modules
 
-Now, we can start loading other packages that we'll be using.  For the first package, the code will be loaded on each processor, but it will only be brought into scope for the master process.
-    If we wanted the package to be in scope on each worker, then we can add the @everywhere macro in front of the using statement.
-    
+Now, we can start loading other packages that we'll be using.  Since we want the packages to be in scope on each worker, then we need to add the @everywhere macro in front of the using statement.  Before we can do that we need to activate the project on each of the workers, so they know that they can use the packages in Project.toml.  We don't need to install or instantiate on each worker, since those write files to disk and all the workers have access to the same filesystem. 
 
 ```julia
-using Distributions
+@everywhere using Pkg
+@everywhere Pkg.activate(".")
 ```
 
 ```julia
+@everywhere using Distributions
 @everywhere using SharedArrays 
 @everywhere using DistributedArrays
 ```
@@ -93,7 +92,7 @@ First, you'll use the code in the exercise, so you have a calculation that's big
 
 You don't need to read all of this code right now.  But, when you're writing code for your class project, you're likely to want to make use of some of these same programming patterns. So, it may be useful to refer back to this code later to help see examples of how to apply these design patterns in practice.  
         
-For now, let's include just the file that has the code for the `ModelSpectrum` module.  `src/ModelSpectrum.jl` includes the code from the other files, `spectrum.jl` and `convolution_kernels.jl`.  We'll preface it with `@everywhere`, since we want all of the processors to be able to make use of these function and types. 
+For now, let's include just the file that has the code for the `ModelSpectrum` module.  `src/ModelSpectrum.jl` includes the code from the other files, `spectrum.jl` and `convolution_kernels.jl`.  We'll preface it with `@everywhere`, since we want all of the processors to be able to make use of these function and types.
 
 ```julia
 @everywhere include("src/ModelSpectrum.jl")
@@ -107,7 +106,7 @@ using .ModelSpectrum
 
 ### Initialize data to be analyzed
 In this exercise, we're going to create a model spectrum consisting of continuum, stellar absorption lines, telluric absorption lines.  
-The `ModelSpectrum` module provides a `SimulatedSpectrum` type, but we'll need to initialize a variable with some specific parameter values.  The function does that for us.  
+The `ModelSpectrum` module provides a `SimulatedSpectrum` type, but we'll need to initialize a variable with some specific parameter values.  The function does that for us.
 
 ```julia
 "Create an object that provides a model for the raw spetrum (i.e., before entering the telescope)"
@@ -132,7 +131,7 @@ Next, we:
 1. create a set of wavelengths to observe the spectrum at, 
 2. call the function above to create a spectrum object, 
 3. create an object containing a model for the point spread function, and 
-4. create an object that can compute the convolution of our spectral model with the point spread function model. 
+4. create an object that can compute the convolution of our spectral model with the point spread function model.
 
 ```julia
 # 1.  Pick range of of wavelength to work on.
@@ -180,7 +179,7 @@ for i in 1:num_runs @time conv_spectrum(lambdas); end
 ```
 
 Before we get into parallelizing the code, we should make sure we understand what's happening with the serial version.  Notice that there is a lot of memory being allocated.  With this syntax, we're passing `conv_spectrum` the entire array of wavelengths and asking it to compute the convolved spectrum all at once, causing more memory to be used than is really needed.
-We could avoid much of the unnecessary memory allocations by writing this as a for loop.  
+We could avoid much of the unnecessary memory allocations by writing this as a for loop.
 
 ```julia
 function compute_using_for_loop(x::AbstractArray, spectrum::T) where T<:ModelSpectrum.AbstractSpectrum
@@ -206,7 +205,6 @@ How do you expect the performance and memory allocations to compare to our for l
 
 INSERT RESPONSE
 
-
 ```julia
 for i in 1:num_runs @time conv_spectrum.(lambdas); end
 ```
@@ -231,7 +229,7 @@ INSERT RESPONSE
 for i in 1:num_runs @time pmap(x->conv_spectrum(x),lambdas) end
 ```
 
-You were likely disappointed in the performance.  What could have gone wrong?  In this case, we have a non-trivial, but still modest amount of work to do for each wavelength.  `pmap` distributes the work one element at a time.  The overhead in distributing the work and assembling the pieces likely ate into the potential performance gains.  To improve on this, we can tell `pmap` to distribute the work in batches.  Below, we'll specify a batch_size via an optional named parameter.  
+You were likely disappointed in the performance.  What could have gone wrong?  In this case, we have a non-trivial, but still modest amount of work to do for each wavelength.  `pmap` distributes the work one element at a time.  The overhead in distributing the work and assembling the pieces likely ate into the potential performance gains.  To improve on this, we can tell `pmap` to distribute the work in batches.  Below, we'll specify a batch_size via an optional named parameter.
 
 ```julia
 for i in 1:num_runs @time pmap(x->conv_spectrum.(x),lambdas,batch_size=min(512,length(lambdas))) end
@@ -251,7 +249,7 @@ lambdas_shared = SharedArray(lambdas)
 typeof(lambdas_shared)
 ```
 
-We apply `map` to a SharedArray just like to a regular Array, but the calculation is still performed in serial.  
+We apply `map` to a SharedArray just like to a regular Array, but the calculation is still performed in serial.
 
 ```julia
 for i in 1:num_runs @time map(conv_spectrum,lambdas_shared) end
@@ -268,7 +266,6 @@ As before, the performance wasn't particularly impressive.  What do you suggest 
 INSERT RESPONSE
 
 Try implementing and benchmarking your suggestion below.
-    
 
 ```julia
 # INSERT CODE
@@ -340,7 +337,6 @@ How do you expect the performance to compare when we run map on a `DArray` with 
 
 INSERT RESPONSE
 
-
 ```julia
 for i in 1:num_runs @time collect(map(conv_spectrum,lambdas_dist)) end
 ```
@@ -351,7 +347,7 @@ INSERT RESPONSE
 
 Copying all that data back for the master process to access added a significant amount to the total time.
 Sometimes you don't actually need to bring all the data back to the master process.  For example, you might have several calculations that can be done, each leaving the data distributed across many workers, until the very end.
-Another common scenario is that you want to performing a task that can be phrased as a [`mapreduce`](https://en.wikipedia.org/wiki/MapReduce) programming pattern.  For example, imagine that we only wanted to compute the total flux over a filter band.  
+Another common scenario is that you want to performing a task that can be phrased as a [`mapreduce`](https://en.wikipedia.org/wiki/MapReduce) programming pattern.  For example, imagine that we only wanted to compute the total flux over a filter band.
 
 ```julia
 # Send the value lambda_min to each of the workers
@@ -380,7 +376,6 @@ INSERT RESPONSE
 ### Distributed for loops
 
 While map, pmap and mapreduce can be very convenient, sometimes it's more natural to express your calculation in terms of a for loop.  We can do that with julia's [`@distributed`](https://docs.julialang.org/en/v1/stdlib/Distributed/#Distributed.@distributed) macro (with more explanation [here](https://docs.julialang.org/en/v1/manual/parallel-computing/#Parallel-Map-and-Loops-1)).  We'll try that below.
-
 
 ```julia
 function compute_using_distributed_for_loop_unsynced(x::AbstractArray, spectrum::T) where T<:ModelSpectrum.AbstractSpectrum
@@ -434,7 +429,6 @@ Julia has native support for using multiple threads.  However, in order to take 
 I'm not sure how we'd do that with the ACI's Jupyter notebook server.  If you're interested, then you could try it out using ACI's interactive desktop.
 If you're using bash as your shell, then run `export JULIA_NUM_THREADS = 4` before starting Julia to tell Julia that it can use 4 threads.
 Check that it worked by running `Threads.nthreads()`.  The easiest way to use multiple threads is as follows (should run fine in serial even if you haven't set `JULIA_NUM_THREADS`):
-    
 
 ```julia
 function compute_using_threaded_for_loop(x, spectrum::T) where T<:ModelSpectrum.AbstractSpectrum
@@ -467,4 +461,4 @@ You can tell BLAS to use 4 threads by calling the function `BLAS.set_num_threads
 LinearAlgebra.BLAS.set_num_threads(4)
 ```
 
-How well this works will likely depend on what BLAS libary Julia is using and how it was compiled.  
+How well this works will likely depend on what BLAS libary Julia is using and how it was compiled.
