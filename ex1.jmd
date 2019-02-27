@@ -67,7 +67,7 @@ In this version of the model, the only input is a list of eccentricities.  Look 
 
 While we could use this exact model (e.g., `target_dist_rayleigh = PopulationFromRayleigh_simple(ecc_list)`) for the next few lines, later on I will want to use some additional features that make use of additional features of Turing.jl.
 
-Therefore, I'll go ahead and write a slightly more explicit version of the same model, but now taking three inputs parameters, the Rayleigh parameter, the list of eccentricities and the number of eccentricities in the list, instead of just the list of eccentricities. 
+Therefore, I'll go ahead and write a slightly more explicit version of the same model, but now taking three inputs parameters, the Rayleigh parameter, the list of eccentricities and the number of eccentricities in the list, instead of just the list of eccentricities.
 
 ```julia
 @model PopulationFromRayleigh(σ, ecc = Vector{Real}(undef, n_ecc), n_ecc) = begin
@@ -85,7 +85,7 @@ Later in this exercise, you'll see why it's useful to explicitly specify the len
 
 Now, we're ready to perform inference using this model.  First, we specify a small number of iterations, just to keep things fast.  Next, we tell Turing that we want to be able to sample from a target probability distribution corresponding to the posterior for σ, i.e., the probability distribution for σ conditioned on the list of eccentricities (and number of eccentricities) being held fixed.  Turing will figure out how to create the necessary Julia code to perform inference on this target probability distribution.  
 Finally, we'll ask Turing to draw a sample from that target distribution using the NUTS sampler. 
-The NUTS sampler requires two parameter, the number of iterations in the MCMC simulation and a tuning parameter that specifies how often we aim for proposals in the Markov chain to be accepted.  
+The NUTS sampler requires two parameter, the number of iterations in the MCMC simulation and a tuning parameter that specifies how often we aim for proposals in the Markov chain to be accepted.
 
 ```julia
 num_itterations = 500
@@ -98,17 +98,17 @@ result_rayleigh = sample(target_dist_rayleigh, NUTS(num_itterations,0.65))
 
 Whenever you perform a MCMC simulation has finished, it's always good to perform some basic checks to make sure that it behaved well.  Turing reexports the [MCMCChain.jl](https://github.com/TuringLang/MCMCChain.jl) package that provides the `describe` function and some plotting tools.  
  
-We'll run `describe` to see a summary of what happened.  The first table shows the estimates for the mean and standard deviation of the distribution, two estimate of the standard error of the mean ("naive" and Monte carlo), and an estimate of the "effective" sample size (which attempts to take into account correlations between successive samples from the Markov chain).  In addition to results for σ (i.e., the model parameter that we performed inference over), it also provides summary information about various algorithmic parameters.  The second table shows quantiles for those parameters.  
+We'll run `describe` to see a summary of what happened.  The first table shows the estimates for the mean and standard deviation of the distribution, two estimate of the standard error of the mean ("naive" and Monte carlo), and an estimate of the "effective" sample size (which attempts to take into account correlations between successive samples from the Markov chain).  In addition to results for σ (i.e., the model parameter that we performed inference over), it also provides summary information about various algorithmic parameters.  The second table shows quantiles for those parameters.
 
 ```julia
 describe(result_rayleigh)
 ```
 
 For now, we'll focus on the summary statistics for σ.  
-While computing convergence diagnostics like the effective sample size is always important, it can also be useful to inspect "trace plots" to make sure Markov chain is "mixing" well (i.e., not getting stuck at one place).  Here we'll plot the Rayleigh parameter as a function of iteration in the Markov Chain.  
+While computing convergence diagnostics like the effective sample size is always important, it can also be useful to inspect "trace plots" to make sure Markov chain is "mixing" well (i.e., not getting stuck at one place).  Here we'll plot the Rayleigh parameter as a function of iteration in the Markov Chain.
 
 ```julia
-plot(result_rayleigh[:σ],legend=:none,title="Rayleigh Model",ylabel="σ",xlabel="Itteration")
+plot(vec(result_rayleigh[:σ]),legend=:none,title="Rayleigh Model",ylabel="σ",xlabel="Itteration")
 ```
 
 Does it appear likely that the samples near the beginning of the Markov chain and the samples near end of the Markov chain could have been drawn from the same distribution?  (If you got a really bad chain, e.g., values of all ones or all zeros, then rerun the `sample(...)` command.)
@@ -125,7 +125,7 @@ Now let's make a histogram of the posterior sample as an estimate of the posteri
 
 ```julia
 idx_range_for_inference = 250:length(result_rayleigh[:σ])
-histogram(result_rayleigh[:σ][idx_range_for_inference],normalize=true,title="Rayleigh Model",legend=:none,xlabel="σ", ylabel="Posterior Distribution")
+histogram(vec(result_rayleigh[:σ][idx_range_for_inference]),normalize=true,title="Rayleigh Model",legend=:none,xlabel="σ", ylabel="Posterior Distribution")
 ```
 
 ### Model checking
@@ -169,7 +169,7 @@ For example, our original model was motivated by the idea that during the planet
 
 Perhaps a better model might allow for the possibility that each planetary system could have undergone a different level of excitation. In that case, rather than assume a single σ for all planets in all planetary systems, we could assume that each planetary system has it's own level of excitation (σ_sys).  In any individual planetary system, a measurement of σ_sys would be imprecise because of the limited number of planets.  In this model, it would be interesting to characterize the distribution for σ_sys.  
 [Lissauer et al. (2011)](http://dx.doi.org/10.1088/0067-0049/197/1/8) proposed using a Rayleigh distribution to describe the level of dynamical excitation of different systems (technically that was for inclinations, but the eccentricities and inclinations are closely related).
-To see if this model is a good description for the eccentricities in our set of planet formation simulations, let's define a new probabilistic model, which I'll shorten to a "Rayleigh of Rayelighs" distribution.  
+To see if this model is a good description for the eccentricities in our set of planet formation simulations, let's define a new probabilistic model, which I'll shorten to a "Rayleigh of Rayelighs" distribution.
 
 ```julia
 @model PopulationFromRayleighOfRayleighs(σ_pop,run,ecc = Vector{Real}(undef, n_ecc),n_runs,n_ecc) = begin
@@ -192,7 +192,6 @@ Now, let's sample from the posterior distribution using new model.
 
 Warning: This next cell will result in performing inference on a much more computationally demanding model.  Once you start it, it is like to run for a long time (e.g., tens of minutes to hours) before completing.  I suggest that you start this calculation, start working on the next exercise, and periodically check in to see how this simulation is proceeding.
 
-
 ```julia
 num_itterations = 500
 result_rayleigh_of_rayleighs = sample(PopulationFromRayleighOfRayleighs(nothing,run_list,ecc_list,num_runs,length(ecc_list)), NUTS(num_itterations,0.65))
@@ -205,13 +204,13 @@ idx_range_for_inference = 250:length(result_rayleigh_of_rayleighs[:σ_pop])
 describe(result_rayleigh_of_rayleighs)
 ```
 
- Wow, that's a pretty long summary.  In this model the MCMC had to sample over the value of σ_pop and 200 different σ_sys[i]'s.  There's a reason it took so much longer than our first model.  In our first model, there was only one unknown model parameter, but now there are 201.
+Wow, that's a pretty long summary.  In this model the MCMC had to sample over the value of σ_pop and 200 different σ_sys[i]'s.  There's a reason it took so much longer than our first model.  In our first model, there was only one unknown model parameter, but now there are 201.
 For a Markov chains to have converged, the Markov chain should demonstrate good mixing for every one of these latent variables.  If this were a real research project, it would be important to perform checks for every one of those.  But for the purposes of this lab exercise, I suggest that we focus on inspecting σ_pop.
 Let's look at the summary statistics and a trace plot for σ_pop.
 
 ```julia
 describe(result_rayleigh_of_rayleighs[:σ_pop][idx_range_for_inference])
-plot(result_rayleigh_of_rayleighs[:σ_pop][idx_range_for_inference],xlabel="Itteration",ylabel="σ_pop",title="Rayeligh of Rayleighs Model",legend=:none,)
+plot(vec(result_rayleigh_of_rayleighs[:σ_pop][idx_range_for_inference]),xlabel="Itteration",ylabel="σ_pop",title="Rayeligh of Rayleighs Model",legend=:none,)
 ```
 
 Based on the summary statistics and trace plot above, do you see any reason to be concerned about using this Markov chain (after excluding burn-in) for estimating the distribution of σ_pop?
@@ -220,7 +219,7 @@ INSERT RESPONSE
 
 ### Comparing posterior distributions from two models
 
-Inspect the posterior distribution for the new population level parameter (σ_pop) and compare to the posterior distribution for the old population level parameter (σ).  
+Inspect the posterior distribution for the new population level parameter (σ_pop) and compare to the posterior distribution for the old population level parameter (σ).
 
 ```julia
 histogram(result_rayleigh[:σ][idx_range_for_inference],normalize=true,label="Rayleigh",xlabel="σ_pop or σ", ylabel="Posterior Distribution", title="Posterior Distributions for Population Parameter")
@@ -232,7 +231,6 @@ Note that these are two different models, so the two variables have very differe
 ### Compute predictive distributions
 Now, let's check whether the predictive distribution results in a similar distribution as the actual data.
 Notice how we can draw from the predictive distribution by specifying a single value of σ_pop and passing `missing` in place of the list of eccentricities.  Again, we'll specify the predictions should use a single value of σ_pop (in this case the the posterior mean) for simplicity.  In order to generate a smooth histogram, we'll ask for it to draw eccentricities for several times as many systems as are in our dataset.
-
 
 ```julia
 mean_σ_pop = mean(result_rayleigh_of_rayleighs[:σ_pop][idx_range_for_inference])
@@ -253,7 +251,6 @@ INSERT RESPONSE
 
 ### Posterior Predictive Distribution
 We could also look at the [posterior predictive distribution](https://en.wikipedia.org/wiki/Posterior_predictive_distribution) which marginalizes over the the posterior distribution for σ_pop, as well as all the unobservable values of σ_sys[i].  To do this, we'll combine several draws from the predictive distribution using several samples of σ_pop from its posterior distribution.
-
 
 ```julia
 histogram(ecc_list,nbins=50,xlimits=[0,0.5],normalize=true,fillalpha=0.4,label="N-body Simulations", title="Rayleigh of Rayleighs Model")
