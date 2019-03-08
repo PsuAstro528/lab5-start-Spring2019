@@ -69,7 +69,7 @@ Note that the number of workers is equal to the number you added, rather than be
 
 ### Loading Packages and modules
 
-Now, we can start loading other packages that we'll be using.  Since we want the packages to be in scope on each worker, then we need to add the @everywhere macro in front of the using statement.  Before we can do that we need to activate the project on each of the workers, so they know that they can use the packages in Project.toml.  We don't need to install or instantiate on each worker, since those write files to disk and all the workers have access to the same filesystem. 
+Now, we can start loading other packages that we'll be using.  Since we want the packages to be in scope on each worker, then we need to add the @everywhere macro in front of the using statement.  Before we can do that we need to activate the project on each of the workers, so they know that they can use the packages in Project.toml.  We don't need to install or instantiate on each worker, since those write files to disk and all the workers have access to the same filesystem.
 
 ```julia
 @everywhere using Pkg
@@ -379,7 +379,7 @@ While map, pmap and mapreduce can be very convenient, sometimes it's more natura
 
 ```julia
 function compute_using_distributed_for_loop_unsynced(x::AbstractArray, spectrum::T) where T<:ModelSpectrum.AbstractSpectrum
-    out = zeros(length(x))
+    out = zeros(length(x))  # Problematic since workers won't write to out on master
     @distributed for i in 1:length(x)
         out[i] = conv_spectrum(x[i])
     end
@@ -388,17 +388,17 @@ end
 ```
 
 ```julia
-for i in 1:num_runs @time compute_using_distributed_for_loop_unsynced(lambdas_dist,conv_spectrum) end
+for i in 1:num_runs @time res=   compute_using_distributed_for_loop_unsynced(lambdas_dist,conv_spectrum) end
 ```
 
 Wow, that was fast!  Or was it?  No.  Actually, what happened is that Julia started the computations on the workers, and let the master process keep going, without waiting for the workers to finish.  
-Sometimes we want to do this, so the master processes can do other work while waiting on the workers to finish.
-But for timing purposes, we want to make sure all the work is complete and the workers have synchronized.
+Sometimes we want to do this, so the master processes can do other work while waiting on the workers to finish.  Also, each worker wrote to its own out array, so we didn't even get the output.  
+For timing purposes, we want to make sure all the work is complete and the workers have synchronized.
 We can do this by adding the [`@sync` macro](https://docs.julialang.org/en/v1/stdlib/Distributed/#Base.@sync).
 
 ```julia
 function compute_using_distributed_for_loop(x::AbstractArray, spectrum::T) where T<:ModelSpectrum.AbstractSpectrum
-    out = zeros(length(x))
+    out =  SharedArray(zeros(length(x)))
     @sync @distributed for i in 1:length(x)
         out[i] = conv_spectrum(x[i])
     end
