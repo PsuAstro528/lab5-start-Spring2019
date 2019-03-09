@@ -301,8 +301,8 @@ Here we'll create a distributed array by simply applying `distribute` to our exi
 ```julia
 @everywhere using DistributedArrays
 lambdas_dist = distribute(lambdas)
-typeof(lambdas_dist)
-size(lambdas_dist)
+println(typeof(lambdas_dist))
+println(size(lambdas_dist))
 ```
 
 As usual, the first time we call a function, it takes some extra time and memory to compile it.  So let's do that again, this time benchmarking the `distribute` operation.

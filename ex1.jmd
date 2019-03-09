@@ -85,7 +85,7 @@ Later in this exercise, you'll see why it's useful to explicitly specify the len
 
 Now, we're ready to perform inference using this model.  First, we specify a small number of iterations, just to keep things fast.  Next, we tell Turing that we want to be able to sample from a target probability distribution corresponding to the posterior for σ, i.e., the probability distribution for σ conditioned on the list of eccentricities (and number of eccentricities) being held fixed.  Turing will figure out how to create the necessary Julia code to perform inference on this target probability distribution.  
 Finally, we'll ask Turing to draw a sample from that target distribution using the NUTS sampler. 
-The NUTS sampler requires two parameter, the number of iterations in the MCMC simulation and a tuning parameter that specifies how often we aim for proposals in the Markov chain to be accepted.
+The NUTS sampler requires two parameters, the number of iterations in the MCMC simulation and a tuning parameter that specifies how often we aim for proposals in the Markov chain to be accepted.
 
 ```julia
 num_itterations = 500
@@ -108,7 +108,7 @@ For now, we'll focus on the summary statistics for σ.
 While computing convergence diagnostics like the effective sample size is always important, it can also be useful to inspect "trace plots" to make sure Markov chain is "mixing" well (i.e., not getting stuck at one place).  Here we'll plot the Rayleigh parameter as a function of iteration in the Markov Chain.
 
 ```julia
-plot(vec(result_rayleigh[:σ]),legend=:none,title="Rayleigh Model",ylabel="σ",xlabel="Itteration")
+plot(vec(result_rayleigh[:σ]),legend=:none,title="Rayleigh Model",ylabel="σ",xlabel="Iteration")
 ```
 
 Does it appear likely that the samples near the beginning of the Markov chain and the samples near end of the Markov chain could have been drawn from the same distribution?  (If you got a really bad chain, e.g., values of all ones or all zeros, then rerun the `sample(...)` command.)
@@ -210,7 +210,7 @@ Let's look at the summary statistics and a trace plot for σ_pop.
 
 ```julia
 describe(result_rayleigh_of_rayleighs[:σ_pop][idx_range_for_inference])
-plot(vec(result_rayleigh_of_rayleighs[:σ_pop][idx_range_for_inference]),xlabel="Itteration",ylabel="σ_pop",title="Rayeligh of Rayleighs Model",legend=:none,)
+plot(vec(result_rayleigh_of_rayleighs[:σ_pop][idx_range_for_inference]),xlabel="Iteration",ylabel="σ_pop",title="Rayeligh of Rayleighs Model",legend=:none,)
 ```
 
 Based on the summary statistics and trace plot above, do you see any reason to be concerned about using this Markov chain (after excluding burn-in) for estimating the distribution of σ_pop?
